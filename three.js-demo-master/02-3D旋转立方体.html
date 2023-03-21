@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旋转立方体</title>
+    <style>
+        body{
+            padding: 0;
+            margin: 0;
+        }
+        #c{
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+        <canvas id="c"></canvas>
+</body>
+    <script type="module">
+        import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
+        
+        function main() {
+            const canvas = document.querySelector('#c');
+            const renderer = new THREE.WebGLRenderer({ canvas });
+
+            //创建透视相机
+            const fov = 75;     //视野范围
+            const aspect = 2;   // 画布宽高比
+            const near = 0.1;   //近平面
+            const far = 5;      //远平面
+            const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+            camera.position.z = 2; //摄像机默认指向Z轴负方向，上方向朝向Y轴正方向。我们将会把立方体放置在坐标原点，所以我们需要往后移一下摄像机才能显示出物体。
+            
+            //绘制场景
+            const scene =  new THREE.Scene();
+            
+            //创建平行光
+            {
+                const color = 0xFFFFFF;
+                const intensity = 1;
+                const light = new THREE.DirectionalLight(color, intensity);
+                light.position.set(-1, 2, 4); //灯光位置
+                scene.add(light);
+            }
+
+            //创建几何体
+            const boxWidth = 1;
+            const boxHeight = 1;
+            const boxDepth = 1;
+            const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+
+            //封装创建材质
+            function makeInstance(geometry, color, x) {
+                const material = new THREE.MeshPhongMaterial({color});
+                
+                const cube = new THREE.Mesh(geometry, material); //创建网格
+                scene.add(cube);
+                
+                cube.position.x = x;
+                
+                return cube;
+            }
+            
+            // 材质数据
+            const cubes = [
+                makeInstance(geometry, 0x46aa88,  0),
+                makeInstance(geometry, 0x8844aa, -2),
+                makeInstance(geometry, 0xaa8844,  2),
+            ];
+
+            //检查渲染器的canvas尺寸是不是和canvas的显示尺寸不一样 如果不一样就设置它
+            function resizeRendererToDisplaySize(renderer) {
+                const canvas = renderer.domElement;
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                const needResize = canvas.width !== width || canvas.height !== height;
+                if (needResize) {
+                renderer.setSize(width, height, false);
+                }
+                return needResize;
+            }
+
+            //场景动起来
+            function render(time) {
+                renderer.render(scene, camera); //摄像机传递个渲染器渲染场景
+
+                time *= 0.001; //时间变为秒
+
+                //判断是否被更新
+                if (resizeRendererToDisplaySize(renderer)) {
+                    const canvas = renderer.domElement;
+                    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                    camera.updateProjectionMatrix();
+                    }
+
+                cubes.forEach((cube, indx) => {
+                    const speed = 1 + indx * .1;
+                    const rot = time * speed;
+                    cube.rotation.x = rot;
+                    cube.rotation.y = rot;
+                });
+                requestAnimationFrame(render); //渲染循环
+
+            }
+            requestAnimationFrame(render); //requestAnimationFrame函数会告诉浏览器你需要显示动画。传入一个函数作为回调函数
+        }
+        main();
+    </script>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D地图</title>
+    <style>
+        body{
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #infoBox{
+            position: absolute;
+            z-index: 2;
+            padding: 10px;
+            visibility: hidden;
+            color: #fff;
+            background-color: 0808088f;
+        }
+    </style>
+    <script src="https://labfile.oss.aliyuncs.com/courses/3314/three.js"></script>
+    <script src="https://labfile.oss.aliyuncs.com/courses/3314/OrbitControls.js"></script>
+    <script src="https://labfile.oss.aliyuncs.com/courses/3314/d3-array.v1.min.js"></script>
+    <script src="https://labfile.oss.aliyuncs.com/courses/3314/d3-geo.v1.min.js"></script>
+</head>
+<body>
+    <div id="infoBox"></div>
+
+    <script>
+        class Map {
+            constructor(container){
+                this.container = container ? container : document.body
+            }
+            init(){
+                this.infoBox = document.getElementById(("infoBox"));
+
+                // 实例化场景
+                this.scene = new THREE.Scene();
+                // 实例化透视相机
+                this.camera = new THREE.PerspectiveCamera(
+                    45,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(0,0,150);
+                this.camera.lookAt(0,0,0);
+                //实例化渲染器
+                this.renderer = new THREE.WebGLRenderer();
+                this.renderer.setSize(window.innerWidth / window.innerHeight);
+                this.container.appendChild(this.renderer.domElement);
+
+                this.loadMapGeoJson();  //加载地图数据
+                this.setMouseMove();  //地图初始化以及墨卡托投影变换
+                this.animate();  //鼠标悬浮地图效果
+                this.setLight();  //设置光源
+                this.setController();  //设置控制
+                this.setResize(); //绑定浏览器缩放事件
+            }
+            setResize() {
+                let that = this;
+                window.addEventListener("resize", function () {
+                    that.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            // 加载地图数据
+            loadMapGeoJson() {
+                let that = this;
+                let loader = new THREE.FileLoader();
+                loader.load(
+                    "https://labfile.oss.aliyuncs.com/courses/3314/china.json",
+                    function(data) {
+                        let jsonData = JSON.parse(data) //数据转化
+                        console.log(jsonData);
+                        that.initMap(jsonData);
+                    }
+                )
+            }
+
+            // 初始化地图
+            initMap(geoJson){
+                let that = this;
+                that.scene = new THREE.Scene();
+                that.map = new THREE.Object3D(); //构造器
+                // 墨卡托投影变换center指重心，translate投影位移，scale指比例尺
+                const projection = d3.geoMercator().center([140.0,37.5]).scale(80).translate([0,0]);
+                geoJson.features.forEach( item => {
+                    //定义一个省份的3D对象
+                    const province = new THREE.Object3D();
+                    //每个对象的坐标数组
+                    const coordinates = item.geometry.coordinates;
+                    //遍历数组
+                    coordinates.forEach(multiPolygon => {
+                        multiPolygon.forEach(polygon => {
+                            // 使用路径以及可选的孔洞来定义一个二维形状平面
+                            const shape = new THREE.Shape();
+                            // 定义材质,一种用于绘制线框样式几何体的材质。
+                            const lineMaterial = new THREE.LineBasicMaterial({
+                                color: "#28b4e1",
+                                });
+                            // 定义几何体
+                            const lineGeometry = new THREE.Geometry();
+                            for (let i = 0;i<polygon.length;i++){
+                                // 将经纬度转换为坐标
+                                const [x,y] = projection(polygon[i]);
+                                if( i === 0) {
+                                    shape.moveTo(x,-y)
+                                }
+                                shape.lineTo(x,-y);
+                                lineGeometry.vertices.push(new THREE.Vector3(x,-y,4.01))  //Vector3是有序的三维向量
+                            }
+
+                            // 定义一个 ExtrudeGeometry 挤压几何体，生成一个有深度的地图形状
+                            const extrudeSettings = {
+                                depth: 4,
+                                bevelEnabled: false,
+                            }
+                            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                            // 分别定义两种材质
+                            const material1 = new THREE.MeshBasicMaterial({color: '#206199', transparent: true, opacity: 0.6});
+                            const material2 = new THREE.MeshBasicMaterial({color: '#28b4e1', transparent: true, opacity: 0.5});
+                            // 定义网格
+                            const mesh = new THREE.Mesh(geometry, [material1, material2]);
+                            // 定义地图的边界线条
+                            const line = new THREE.Line(lineGeometry, lineMaterial);
+                            province.add(mesh);
+                            province.add(line);
+                        });
+                    });
+                    // 将geo属性放入到省份3D模型中
+                    province.properties = item.properties;
+                    if (item.properties.contorid) {
+                        const [x, y] = projection(item.properties.contorid);
+                        province.properties._centroid = [x, y];
+                    }
+                    that.map.add(province);
+                })
+                that.scene.add(that.map);
+            }
+       
+        }
+
+
+        const map = new Map();
+        map.loadMapGeoJson();
+        </script>
+</body>
+</html>

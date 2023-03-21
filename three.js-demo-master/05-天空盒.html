@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>50-Skybox</title>
+    <style>
+      body {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="canvas"></div>
+    <script src="https://labfile.oss.aliyuncs.com/courses/3314/three2021.js"></script>
+    <script src="https://labfile.oss.aliyuncs.com/courses/3314/orbit_controls.js"></script>
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        55,
+        window.innerWidth / window.innerHeight,
+        45,
+        30000
+      );
+      camera.position.set(-900, -200, -900);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      const canvas = document.getElementById("canvas");
+      canvas.appendChild(renderer.domElement);
+
+      const controls = new THREE.OrbitControls(camera);
+      controls.addEventListener("change", renderer);
+      controls.minDistance = 100;
+      controls.maxDistance = 3000;
+
+      let materialArray = [];
+      const texture_ft = new THREE.TextureLoader().load(
+        "./images/px.jpg"
+      );
+      const texture_bk = new THREE.TextureLoader().load(
+        "./images/nx.jpg"
+      );
+      const texture_up = new THREE.TextureLoader().load(
+        "./images/py.jpg"
+      );
+      const texture_dn = new THREE.TextureLoader().load(
+        "./images/ny.jpg"
+      );
+      const texture_rt = new THREE.TextureLoader().load(
+        "./images/pz.jpg"
+      );
+      const texture_lf = new THREE.TextureLoader().load(
+        "./images/nz.jpg"
+      );
+
+      materialArray.push(new THREE.MeshBasicMaterial({ map: texture_ft }));
+      materialArray.push(new THREE.MeshBasicMaterial({ map: texture_bk }));
+      materialArray.push(new THREE.MeshBasicMaterial({ map: texture_up }));
+      materialArray.push(new THREE.MeshBasicMaterial({ map: texture_dn }));
+      materialArray.push(new THREE.MeshBasicMaterial({ map: texture_rt }));
+      materialArray.push(new THREE.MeshBasicMaterial({ map: texture_lf }));
+
+      for (let i = 5; i >= 0; i--) materialArray[i].side = THREE.BackSide;
+      const skyboxGeo = new THREE.BoxGeometry(10000, 10000, 10000);
+      const skybox = new THREE.Mesh(skyboxGeo, materialArray);
+      scene.add(skybox);
+      animate();
+      function animate() {
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+    </script>
+  </body>
+</html>
